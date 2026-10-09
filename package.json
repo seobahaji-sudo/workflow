@@ -1,0 +1,16 @@
+{
+  "name": "gta6-news-auto-publisher",
+  "version": "1.0.0",
+  "description": "Automated GTA 6 news translation and publisher for gtavistore.ir",
+  "main": "fetch_and_publish.js",
+  "scripts": {
+    "start": "node fetch_and_publish.js"
+  },
+  "keywords": [
+    "gta6",
+    "wordpress",
+    "automation"
+  ],
+  "author": "gtavistore",
+  "license": "MIT"
+}

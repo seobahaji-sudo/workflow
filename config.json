@@ -1,0 +1,23 @@
+{
+  "site_settings": {
+    "cms_type": "wordpress",
+    "wp_url": "https://gtavistore.ir",
+    "wp_username": "mhm.worker@gmail.com",
+    "wp_password": "Db7g N23X CDU6 1pEq yK8V aAu9",
+    "post_status": "publish",
+    "default_category_id": 1,
+    "tags": ["GTA 6", "GTA VI", "راکستار گیمز", "اخبار بازی"]
+  },
+  "content_settings": {
+    "language": "fa",
+    "tone": "engaging_journalistic",
+    "min_words": 600,
+    "include_faq": true,
+    "auto_seo_meta": true
+  },
+  "rss_feeds": [
+    "https://news.google.com/rss/search?q=GTA+6+Rockstar+Games&hl=en-US&gl=US&ceid=US:en",
+    "https://www.gamespot.com/feeds/mashup/",
+    "https://feeds.feedburner.com/ign/news"
+  ]
+}
