@@ -205,7 +205,7 @@ async function generateAIContent(newsItem, recentPosts) {
 }`;
     
     const response = await ai.models.generateContent({
-        model: 'gemini-3.0-flash',
+        model: 'gemini-1.5-flash',
         contents: prompt,
         config: { responseMimeType: "application/json", temperature: 0.7 }
     });
