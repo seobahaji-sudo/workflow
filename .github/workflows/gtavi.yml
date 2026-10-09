@@ -6,30 +6,31 @@ on:
   workflow_dispatch:
 
 jobs:
-  publish:
+  publish-news:
     runs-on: ubuntu-latest
     permissions:
-      contents: write 
+      contents: write
 
     steps:
-      - name: Checkout Repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      - name: Install Dependencies
-        run: npm install rss-parser axios node-html-parser @google/genai form-data fs mime
+      - name: Install Packages
+        run: npm install @google/genai dotenv rss-parser axios node-html-parser form-data
 
-      - name: Run Fetch and Publish Script
+      - name: Fetch and Draft with AI
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: node fetch_and_publish.js
 
-      - name: Commit history.json
+      - name: Commit history
         run: |
-          git config --global user.name 'github-actions[bot]'
-          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-          git add history.json
-          git commit -m "chore: update published history" || echo "No changes to commit"
-          git push
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add history.json || echo "No files to add"
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-drafted new GTA 6 post" && git push)
