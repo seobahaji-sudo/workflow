@@ -9,7 +9,6 @@ const https = require('https');
 const http = require('http');
 const { GoogleGenAI } = require('@google/genai');
 
-// اگر به صورت محلی استفاده می‌کنید، می‌توانید از فایل .env هم استفاده کنید
 require('dotenv').config();
 
 const CONFIG_PATH = path.join(__dirname, 'config.json');
@@ -30,11 +29,7 @@ function loadConfig() {
 
 function loadHistory() {
     if (fs.existsSync(HISTORY_PATH)) {
-        try {
-            return JSON.parse(fs.readFileSync(HISTORY_PATH, 'utf-8'));
-        } catch (e) {
-            return [];
-        }
+        try { return JSON.parse(fs.readFileSync(HISTORY_PATH, 'utf-8')); } catch (e) { return []; }
     }
     return [];
 }
@@ -55,10 +50,7 @@ function requestHttp(targetUrl, options = {}, postData = null) {
             path: urlObj.pathname + (urlObj.search || ''),
             method: options.method || (postData ? 'POST' : 'GET'),
             rejectUnauthorized: false,
-            headers: {
-                'User-Agent': 'Mozilla/5.0',
-                ...options.headers
-            }
+            headers: { 'User-Agent': 'Mozilla/5.0', ...options.headers }
         };
 
         if (postData && !reqOptions.headers['Content-Length']) {
@@ -70,7 +62,6 @@ function requestHttp(targetUrl, options = {}, postData = null) {
                 const nextUrl = new URL(res.headers.location, targetUrl).toString();
                 return resolve(requestHttp(nextUrl, { ...options, method: 'GET' }));
             }
-
             let data = '';
             res.on('data', chunk => data += chunk);
             res.on('end', () => resolve({ statusCode: res.statusCode, headers: res.headers, body: data }));
@@ -78,7 +69,6 @@ function requestHttp(targetUrl, options = {}, postData = null) {
 
         req.on('error', reject);
         req.setTimeout(25000, () => reject(new Error('Connection timed out')));
-
         if (postData) req.write(postData);
         req.end();
     });
@@ -179,62 +169,51 @@ async function uploadFeaturedImage(wpUrl, username, password, imageUrl) {
     return null;
 }
 
-/**
- * ارتباط با جمینای و ترجمه و تولید محتوای سئو شده
- */
 async function generateAIContent(newsItem, recentPosts) {
     const geminiApiKey = process.env.GEMINI_API_KEY;
     if (!geminiApiKey) {
-        throw new Error("کلید GEMINI_API_KEY در متغیرهای محیطی یافت نشد! لطفاً آن را در GitHub Secrets تنظیم کنید.");
+        throw new Error("API Key is missing!");
     }
 
     const ai = new GoogleGenAI({ apiKey: geminiApiKey });
 
     let prevPostsText = "";
     if (recentPosts && recentPosts.length > 0) {
-        prevPostsText = "پست‌های قبلی سایت ما برای لینک‌سازی داخلی (انکر تکست حتماً دقیقاً همین عناوین باشد):\n" + 
+        prevPostsText = "پست‌های قبلی سایت ما برای لینک‌سازی داخلی:\n" + 
             recentPosts.slice(0,3).map(p => `- Title: ${p.title.rendered}, URL: ${p.link}`).join('\n');
     }
 
-    const prompt = `شما یک کارشناس سئو و نویسنده ارشد وردپرس برای سایت gtavistore.ir هستید.
-خبر زیر را از زبان انگلیسی دریافت کرده و یک مقاله خبری عالی به زبان فارسی روان، جذاب و کاملاً سئو شده درباره بازی GTA 6 بنویسید.
+    const prompt = `شما یک کارشناس سئو و نویسنده ارشد وردپرس هستید.
+خبر زیر را از انگلیسی دریافت کرده و یک مقاله خبری عالی به زبان فارسی روان، جذاب و سئو شده درباره بازی GTA 6 بنویسید.
 
 خبر اصلی:
 عنوان: ${newsItem.title}
-متن کوتاه خبر: ${newsItem.description}
+متن کوتاه: ${newsItem.description}
 
-دستورالعمل‌های نگارشی و سئو:
-۱. عنوان پست (title) باید کوتاه، جذاب و کلیک‌خور برای مخاطب ایرانی باشد (تایتل سئو).
-۲. در متن مقاله از تگ‌های هدینگ <h2> و <h3> استفاده کنید (از <h1> استفاده نکنید).
-۳. محتوا باید طولانی، خوانا و بدون لحن ماشینی باشد و در نهایت یک بار توسط خود شما بازنگری شود که درست و دقیق باشد.
-۴. در متن به صفحات فروشگاه مانند "خرید بازی GTA 6" (لینک: https://gtavistore.ir/product/gta-vi/) و فروشگاه (لینک: https://gtavistore.ir/shop/) لینک داخلی بدهید.
-۵. ${prevPostsText} اگر مرتبط بود حتماً به آنها لینک داخلی بدهید.
-۶. خروجی را فقط و فقط به صورت یک آبجکت JSON معتبر (بدون تگ مارک‌داون \`\`\`json) برگردانید. ساختار JSON باید اینگونه باشد:
+دستورالعمل‌ها:
+۱. عنوان پست جذاب و کلیک‌خور برای مخاطب ایرانی باشد.
+۲. در متن مقاله از تگ‌های هدینگ <h2> و <h3> استفاده کنید.
+۳. به صفحات داخلی فروشگاه (مثل https://gtavistore.ir/product/gta-vi/) لینک بدهید.
+۴. ${prevPostsText} به این موارد هم لینک داخلی بدهید.
+۵. خروجی را فقط به صورت یک آبجکت JSON معتبر برگردانید:
 {
-  "title": "عنوان کوتاه و جذاب برای پست",
-  "content": "متن کامل مقاله به فرمت HTML (شامل تگ‌های p, h2, h3, a, ul)",
-  "rank_math_title": "عنوان سئو برای افزونه رنک مث",
+  "title": "عنوان جذاب",
+  "content": "متن کامل مقاله به فرمت HTML",
+  "rank_math_title": "عنوان سئو برای رنک مث",
   "rank_math_description": "توضیحات متا برای رنک مث (حدود 150 کاراکتر)",
-  "rank_math_focus_keyword": "کلمه کلیدی کانونی (مثلا: اخبار جی تی ای 6)"
+  "rank_math_focus_keyword": "کلمه کلیدی کانونی"
 }`;
-
-    console.log('[AI] Calling Google Gemini to translate and generate SEO optimized content...');
     
     const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
+        model: 'gemini-3.0-flash',
         contents: prompt,
-        config: {
-            responseMimeType: "application/json",
-            temperature: 0.7
-        }
+        config: { responseMimeType: "application/json", temperature: 0.7 }
     });
 
     const jsonText = response.text;
     try {
         return JSON.parse(jsonText);
     } catch (e) {
-        console.error("خطا در پارس کردن خروجی جمینای:", e);
-        console.error("Raw response:", jsonText);
         throw new Error("جمینای خروجی JSON معتبری برنگرداند.");
     }
 }
@@ -246,7 +225,7 @@ async function publishPostAsDraft(wpUrl, username, password, aiData, featuredMed
     const payloadObj = {
         title: aiData.title,
         content: aiData.content,
-        status: 'draft', // کاربر خواسته در حالت پیش‌نویس باشد
+        status: 'draft',
         meta: {
             rank_math_title: aiData.rank_math_title,
             rank_math_description: aiData.rank_math_description,
@@ -254,51 +233,30 @@ async function publishPostAsDraft(wpUrl, username, password, aiData, featuredMed
         }
     };
 
-    if (featuredMediaId) {
-        payloadObj.featured_media = featuredMediaId;
-    }
-
-    const payload = JSON.stringify(payloadObj);
+    if (featuredMediaId) payloadObj.featured_media = featuredMediaId;
 
     const res = await requestHttp(apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': authHeader }
-    }, payload);
+    }, JSON.stringify(payloadObj));
 
-    if (res.statusCode >= 200 && res.statusCode < 300) {
-        return JSON.parse(res.body);
-    }
-    
+    if (res.statusCode >= 200 && res.statusCode < 300) return JSON.parse(res.body);
     throw new Error(`WordPress REST API Error: ${res.statusCode} - ${res.body}`);
 }
 
 async function main() {
-    console.log('========================================================');
-    console.log('GTA VI Pro Auto-Publisher (AI Powered + SEO RankMath)');
-    console.log('Target: gtavistore.ir (Draft Mode)');
-    console.log('========================================================');
-
     const config = loadConfig();
     const history = loadHistory();
     const { wp_url, wp_username, wp_password } = config.site_settings;
 
-    console.log('[1/5] Checking existing articles on WordPress...');
     const existingPosts = await fetchAndCleanDuplicatePosts(wp_url, wp_username, wp_password);
-    const existingTitles = existingPosts.map(p => (p.title?.rendered || '').replace(/<[^>]+>/g, '').trim().toLowerCase());
-
-    console.log('\n[2/5] Searching Google News for GTA 6...');
+    
     let foundNews = [];
     for (const feedUrl of config.rss_feeds) {
-        try {
-            const xml = (await requestHttp(feedUrl)).body;
-            foundNews.push(...parseRss(xml));
-        } catch (err) {}
+        try { foundNews.push(...parseRss((await requestHttp(feedUrl)).body)); } catch (err) {}
     }
 
-    let candidateNews = foundNews.filter(item => {
-        if (history.includes(item.link)) return false;
-        return true; 
-    });
+    let candidateNews = foundNews.filter(item => !history.includes(item.link));
 
     if (candidateNews.length === 0) {
         console.log('هیچ خبر جدیدی یافت نشد!');
@@ -308,36 +266,25 @@ async function main() {
     const targetNews = candidateNews[0];
     const finalImageUrl = targetNews.imageUrl || DEFAULT_GTA6_IMAGES[Math.floor(Math.random() * DEFAULT_GTA6_IMAGES.length)];
 
-    console.log(`\n[3/5] Generating AI Content via Gemini for: "${targetNews.title}"`);
     const aiData = await generateAIContent(targetNews, existingPosts);
 
-    console.log(`\n[4/5] Uploading featured image to WordPress...`);
     let featuredMediaId = null;
     try {
         const mediaResult = await uploadFeaturedImage(wp_url, wp_username, wp_password, finalImageUrl);
         if (mediaResult) featuredMediaId = mediaResult.mediaId;
-    } catch (e) {
-        console.log(`[Media] Upload notice: ${e.message}`);
-    }
+    } catch (e) {}
 
-    // اضافه کردن عکس به ابتدای متن
     if (featuredMediaId) {
         aiData.content = `<img src="${finalImageUrl}" alt="${aiData.title}" class="aligncenter size-large" />\n\n` + aiData.content;
     }
 
-    console.log(`\n[5/5] Saving as DRAFT in WordPress ...`);
     try {
-        const publishResult = await publishPostAsDraft(wp_url, wp_username, wp_password, aiData, featuredMediaId);
-        console.log('\n========================================================');
-        console.log('🎉 SUCCESS! Post saved as DRAFT in gtavistore.ir:');
-        console.log(`   - Title: ${aiData.title}`);
-        console.log(`   - RankMath Keyword: ${aiData.rank_math_focus_keyword}`);
-        console.log('   (شما می‌توانید در وردپرس آن را نهایی و منتشر کنید)');
-        console.log('========================================================');
+        await publishPostAsDraft(wpUrl, wp_username, wp_password, aiData, featuredMediaId);
         history.push(targetNews.link);
         saveHistory(history);
+        console.log('🎉 SUCCESS! Post saved as DRAFT in gtavistore.ir');
     } catch (pubErr) {
-        console.error(`\n[Error publishing to site]: ${pubErr.message}`);
+        console.error(`Error: ${pubErr.message}`);
     }
 }
 
