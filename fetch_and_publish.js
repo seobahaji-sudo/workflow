@@ -2,7 +2,10 @@
  * GTA VI Pro Auto-Publisher for gtavistore.ir
  * با سیستم پیش‌نویس وردپرس، ترجمه پیشرفته با جمینای و تنظیمات سئو رنک‌مث
  */
-
+      - name: دریافت و پیش‌نویس خودکار خبر با جمینای
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: node fetch_and_publish.js
 const fs = require('fs');
 const path = require('path');
 const https = require('https');
